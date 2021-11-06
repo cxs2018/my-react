@@ -1,3 +1,4 @@
+import $ from "jquery";
 class Unit {
   constructor(element) {
     this.currentElement = element;
@@ -17,6 +18,14 @@ class ReactNativeUnit extends Unit {
     let tagEnd = `</${type}>`;
     let contentStr;
     for (let propName in props) {
+      if (/^on[A-Z]/.test(propName)) {
+        let eventType = propName.slice(2).toLowerCase();
+        $(document).on(
+          eventType,
+          `[data-reactid="${rootId}"]`,
+          props[propName]
+        );
+      }
       if (propName === "children") {
         contentStr = props[propName]
           .map((child, idx) => {
