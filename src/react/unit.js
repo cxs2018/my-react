@@ -19,6 +19,49 @@ class ReactTextUnit extends Unit {
   }
 }
 class ReactNativeUnit extends Unit {
+  updateDOMProperties(oldProps, newProps) {
+    let propName;
+    // 循环老的属性集合
+    for (propName in oldProps) {
+      // 新的props没有这个属性
+      if (!newProps.hasOwnProperty(propName)) {
+        $(`[data-reactid=${this._rootId}]`).removeAttr(propName);
+        // 取消事件委托
+        if (/^on[A-Z]/.test(propName)) {
+          $(document).undelegate(`.${this._rootId}`);
+        }
+      }
+    }
+    for (propName in newProps) {
+      if (propName === "children") {
+        // 如果是儿子属性的话，先不处理
+        continue;
+      } else if (/^on[A-Z]/.test(propName)) {
+        let eventType = propName.slice(2).toLowerCase();
+        $(document).delegate(
+          `[data-reactid="${this._rootId}"]`,
+          `${eventType}.${this._rootId}`,
+          newProps[propName]
+        );
+      } else if (propName === "style") {
+        Object.entries(newProps[propName]).forEach(([attr, value]) => {
+          $(`[data-reactid=${this._rootId}]`).css(attr, value);
+        });
+      } else if (propName === "className") {
+        // $(`[data-reactid=${this._rootId}]`)[0].className = newProps[propName];
+        $(`[data-reactid=${this._rootId}]`).attr("class", newProps[propName]);
+      } else {
+        $(`[data-reactid=${this._rootId}]`).prop(propName, newProps[propName]);
+      }
+    }
+  }
+
+  update(nextElement) {
+    let oldProps = this._currentElement.props;
+    let newProps = nextElement.props;
+    this.updateDOMProperties(oldProps, newProps);
+  }
+
   getMarkUp(rootId) {
     this._rootId = rootId;
     let { type, props } = this._currentElement;
@@ -28,12 +71,16 @@ class ReactNativeUnit extends Unit {
     for (let propName in props) {
       if (/^on[A-Z]/.test(propName)) {
         let eventType = propName.slice(2).toLowerCase();
-        $(document).on(
-          eventType,
+        // $(document).on(
+        //   eventType,
+        //   `[data-reactid="${rootId}"]`,
+        //   props[propName]
+        // );
+        $(document).delegate(
           `[data-reactid="${rootId}"]`,
+          `${eventType}.${rootId}`,
           props[propName]
         );
-        //  $(document).delegate(`[data-reactid="${rootId}"]`, eventType, props[propName]);
       } else if (propName === "style") {
         // 如果是一个样式对象
         let styles = Object.entries(props[propName])
@@ -152,8 +199,8 @@ function shouldDeepCompare(oldElement, newElement) {
     ) {
       return true;
     }
-    if (oldType instanceof Element && newElement instanceof Element) {
-      return oldType.type === newElement.type;
+    if (oldElement instanceof Element && newElement instanceof Element) {
+      return oldType.type === newType.type;
     }
   }
   return false;

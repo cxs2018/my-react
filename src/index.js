@@ -23,7 +23,7 @@ class Counter extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      number: 1,
+      number: 0,
     };
   }
 
@@ -33,23 +33,35 @@ class Counter extends React.Component {
 
   componentDidMount() {
     console.log("parent mounted");
-    setInterval(() => {
-      this.setState({
-        number: this.state.number + 1,
-      });
-    }, 1000);
   }
 
   componentDidUpdate() {
     console.log("parent update");
   }
 
+  handleClick = () => {
+    this.setState({
+      number: this.state.number + 1,
+    });
+  };
+
   render() {
+    let p = React.createElement("p", {}, this.state.number);
+    let button = React.createElement(
+      "button",
+      { onClick: this.handleClick },
+      "+"
+    );
     return React.createElement(
       "div",
-      { name: "divRoot" },
-      this.state.number,
-      React.createElement(SubCounter, { name: "subCounter" })
+      {
+        style: {
+          color: this.state.number % 2 === 0 ? "red" : "green",
+          backgroundColor: this.state.number % 2 === 0 ? "green" : "red",
+        },
+      },
+      p,
+      button
     );
   }
 }
