@@ -23,7 +23,7 @@ class Counter extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      number: 234,
+      number: 1,
     };
   }
 
@@ -33,6 +33,15 @@ class Counter extends React.Component {
 
   componentDidMount() {
     console.log("parent mounted");
+    setInterval(() => {
+      this.setState({
+        number: this.state.number + 1,
+      });
+    }, 1000);
+  }
+
+  componentDidUpdate() {
+    console.log("parent update");
   }
 
   render() {
@@ -62,5 +71,15 @@ function say() {
 // console.log(element);
 
 let element = React.createElement(Counter, { name: "cxs" });
+
+// let element = React.createElement(
+//   "button",
+//   {
+//     id: "sayhello",
+//     style: { color: "red", backgroundColor: "green" },
+//     onClick: say,
+//   },
+//   "sayhello"
+// );
 
 React.render(element, document.getElementById("root"));
