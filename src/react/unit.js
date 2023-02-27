@@ -1,5 +1,10 @@
 import $ from "jquery";
 import { Element } from "./element";
+import Type from "./type";
+
+let diffQueue = []; // 差异队列
+let updateDepth = 0; // 更新的级别
+
 class Unit {
   constructor(element) {
     this._currentElement = element;
@@ -25,7 +30,7 @@ class ReactNativeUnit extends Unit {
     for (propName in oldProps) {
       // 新的props没有这个属性
       if (!newProps.hasOwnProperty(propName)) {
-        $(`[data-reactid=${this._rootId}]`).removeAttr(propName);
+        $(`[data-reactid="${this._rootId}"]`).removeAttr(propName);
         // 取消事件委托
         if (/^on[A-Z]/.test(propName)) {
           $(document).undelegate(`.${this._rootId}`);
@@ -45,21 +50,120 @@ class ReactNativeUnit extends Unit {
         );
       } else if (propName === "style") {
         Object.entries(newProps[propName]).forEach(([attr, value]) => {
-          $(`[data-reactid=${this._rootId}]`).css(attr, value);
+          $(`[data-reactid="${this._rootId}"]`).css(attr, value);
         });
       } else if (propName === "className") {
         // $(`[data-reactid=${this._rootId}]`)[0].className = newProps[propName];
-        $(`[data-reactid=${this._rootId}]`).attr("class", newProps[propName]);
+        $(`[data-reactid="${this._rootId}"]`).attr("class", newProps[propName]);
       } else {
-        $(`[data-reactid=${this._rootId}]`).prop(propName, newProps[propName]);
+        $(`[data-reactid="${this._rootId}"]`).prop(
+          propName,
+          newProps[propName]
+        );
       }
     }
+  }
+
+  // 此处要把新的儿子们传过来，然后和老的儿子们进行对比，找出差异，修改DOM
+  updateDOMChildren(newChildrenElements) {
+    this.diff(diffQueue, newChildrenElements);
+    console.log(diffQueue);
+  }
+
+  diff(diffQueue, newChildrenElements) {
+    // 第一步生成一个老儿子的map
+    let oldChildrenUnitMap = this.getOldChildrenMap(
+      this._renderedChildrenUnits
+    );
+    // 第二步生成一个新儿子的unit数组
+    let { newChildrenUnits, newChildrenUnitMap } = this.getNewChildren(
+      oldChildrenUnitMap,
+      newChildrenElements
+    );
+    let lastIndex = 0; // 上一个已经确定位置的索引
+    for (let i = 0; i < newChildrenUnits.length; i++) {
+      let newUnit = newChildrenUnits[i];
+      let newKey =
+        (newUnit._currentElement.props && newUnit._currentElement.props.key) ||
+        i.toString();
+      let oldChildUnit = oldChildrenUnitMap[newKey];
+      if (oldChildUnit === newUnit) {
+        // 如果说新老一致的话，说明是复用老节点
+        if (oldChildUnit._mountedIndex < lastIndex) {
+          diffQueue.push({
+            parentId: this._rootId,
+            parentNode: $(`[data-reactid="${this._rootId}"]`),
+            type: Type.MOVE,
+            fromIndex: oldChildUnit._mountedIndex,
+            toIndex: i,
+          });
+        }
+        lastIndex = Math.max(lastIndex, oldChildUnit._mountedIndex);
+      } else {
+        diffQueue.push({
+          parentId: this._rootId,
+          parentNode: $(`[data-reactid="${this._rootId}"]`),
+          type: Type.INSERT,
+          toIndex: i,
+          markUp: newUnit.getMarkUp(`${this._rootId}.${i}`),
+        });
+      }
+      newUnit._mountedIndex = i;
+    }
+    for (let oldKey in oldChildrenUnitMap) {
+      if (!newChildrenUnitMap.hasOwnProperty(oldKey)) {
+        diffQueue.push({
+          parentId: this._rootId,
+          parentNode: $(`[data-reactid="${this._rootId}"]`),
+          type: Type.REMOVE,
+          formIndex: oldChildrenUnitMap[oldKey]._mountedIndex,
+        });
+      }
+    }
+  }
+
+  // TODO: 为什么不直接使用 this._currentElement.props.children
+  getOldChildrenMap(childrenUnits = []) {
+    let map = {};
+    for (let i = 0; i < childrenUnits.length; i++) {
+      let key =
+        (childrenUnits[i] &&
+          childrenUnits[i]._currentElement &&
+          childrenUnits[i]._currentElement.props &&
+          childrenUnits[i]._currentElement.props.key) ||
+        i.toString();
+      map[key] = childrenUnits[i];
+    }
+    return map;
+  }
+
+  getNewChildren(oldChildrenUnitMap, newChildrenElements) {
+    let newChildren = [];
+    let newChildrenUnitMap = {};
+    newChildrenElements.forEach((newElement, index) => {
+      let newKey =
+        (newElement.props && newElement.props.key) || index.toString();
+      let oldUnit = oldChildrenUnitMap[newKey]; // 找到老的unit
+      let oldElement = oldUnit && oldUnit._currentElement; // 获取老元素
+      if (shouldDeepCompare(oldElement, newElement)) {
+        oldUnit.update(newElement);
+        newChildren.push(oldUnit);
+        newChildrenUnitMap[newKey] = oldUnit;
+      } else {
+        let newUnit = createReactUnit(newElement);
+        newChildren.push(newUnit);
+        newChildrenUnitMap[newKey] = newUnit;
+        this._renderedChildrenUnits[index] = newUnit;
+      }
+    });
+    return { newChildrenUnits: newChildren, newChildrenUnitMap };
   }
 
   update(nextElement) {
     let oldProps = this._currentElement.props;
     let newProps = nextElement.props;
     this.updateDOMProperties(oldProps, newProps);
+    this.updateDOMChildren(nextElement.props.children);
   }
 
   getMarkUp(rootId) {
@@ -68,6 +172,7 @@ class ReactNativeUnit extends Unit {
     let tagStart = `<${type} data-reactid="${rootId}"`;
     let tagEnd = `</${type}>`;
     let contentStr = "";
+    this._renderedChildrenUnits = [];
     for (let propName in props) {
       if (/^on[A-Z]/.test(propName)) {
         let eventType = propName.slice(2).toLowerCase();
@@ -98,6 +203,8 @@ class ReactNativeUnit extends Unit {
         contentStr = props[propName]
           .map((child, idx) => {
             let childInstance = createReactUnit(child);
+            childInstance._mountedIndex = idx; // 每个unit有一个_mountedIndex属性，指向自己在父节点中的索引位置
+            this._renderedChildrenUnits.push(childInstance);
             return childInstance.getMarkUp(`${rootId}.${idx}`);
           })
           .join("");
@@ -200,7 +307,7 @@ function shouldDeepCompare(oldElement, newElement) {
       return true;
     }
     if (oldElement instanceof Element && newElement instanceof Element) {
-      return oldType.type === newType.type;
+      return oldElement.type === newElement.type;
     }
   }
   return false;

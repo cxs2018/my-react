@@ -66,6 +66,47 @@ class Counter extends React.Component {
   }
 }
 
+class Counter2 extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      odd: false,
+    };
+  }
+
+  componentDidMount() {
+    console.log("parent mounted");
+    setInterval(() => {
+      this.setState({
+        odd: !this.state.odd,
+      });
+    }, 1000);
+  }
+
+  render() {
+    if (!this.state.odd) {
+      return React.createElement(
+        "ul",
+        null,
+        React.createElement("li", { key: "A" }, "A"),
+        React.createElement("li", { key: "B" }, "B"),
+        React.createElement("li", { key: "C" }, "C"),
+        React.createElement("li", { key: "D" }, "D")
+      );
+    } else {
+      return React.createElement(
+        "ul",
+        null,
+        React.createElement("li", { key: "A" }, "A"),
+        React.createElement("li", { key: "C" }, "C1"),
+        React.createElement("li", { key: "B" }, "B1"),
+        React.createElement("li", { key: "E" }, "E1"),
+        React.createElement("li", { key: "F" }, "F1")
+      );
+    }
+  }
+}
+
 function say() {
   alert(1);
 }
