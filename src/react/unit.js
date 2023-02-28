@@ -69,8 +69,58 @@ class ReactNativeUnit extends Unit {
 
   // 此处要把新的儿子们传过来，然后和老的儿子们进行对比，找出差异，修改DOM
   updateDOMChildren(newChildrenElements) {
+    updateDepth++;
     this.diff(diffQueue, newChildrenElements);
     console.log(diffQueue);
+    updateDepth--;
+    if (updateDepth === 0) {
+      this.patch(diffQueue);
+      diffQueue = [];
+    }
+  }
+
+  patch(diffQueue) {
+    let deleteChildren = []; // 要删除的节点
+    let deleteMap = {}; // 暂存能复用的节点
+    for (let i = 0; i < diffQueue.length; i++) {
+      const difference = diffQueue[i];
+      if (difference.type === Type.MOVE || difference.type === Type.REMOVE) {
+        let fromIndex = difference.fromIndex;
+        let oldChild = $(difference.parentNode.children().get(fromIndex));
+        if (!deleteMap[difference.parentId]) {
+          deleteMap[difference.parentId] = {};
+        }
+        deleteMap[difference.parentId][fromIndex] = oldChild;
+        deleteChildren.push(oldChild);
+      }
+    }
+    $.each(deleteChildren, (idx, item) => $(item).remove());
+    for (let i = 0; i < diffQueue.length; i++) {
+      const difference = diffQueue[i];
+      switch (difference.type) {
+        case Type.INSERT:
+          this.insertChildAt(
+            difference.parentNode,
+            difference.toIndex,
+            $(difference.markUp)
+          );
+          break;
+        case Type.MOVE:
+          this.insertChildAt(
+            difference.parentNode,
+            difference.toIndex,
+            deleteMap[difference.parentId][difference.fromIndex]
+          );
+          break;
+        default:
+          break;
+      }
+    }
+  }
+
+  insertChildAt(parentNode, index, newNode) {
+    let oldChild = parentNode.children().get(index);
+    oldChild ? newNode.insertBefore(oldChild) : newNode.appendTo(parentNode);
   }
 
   diff(diffQueue, newChildrenElements) {
@@ -103,6 +153,21 @@ class ReactNativeUnit extends Unit {
         }
         lastIndex = Math.max(lastIndex, oldChildUnit._mountedIndex);
       } else {
+        // key一样，type不一样
+        if (oldChildUnit) {
+          diffQueue.push({
+            parentId: this._rootId,
+            parentNode: $(`[data-reactid="${this._rootId}"]`),
+            type: Type.REMOVE,
+            fromIndex: oldChildUnit._mountedIndex,
+          });
+          // 如果要删除掉某一个节点，要把它对应的unit也删除掉
+          this._renderedChildrenUnits = this._renderedChildrenUnits.filter(
+            (item) => item !== oldChildUnit
+          );
+          // 取消事件委托
+          $(document).undelegate(`.${oldChildUnit._rootId}`);
+        }
         diffQueue.push({
           parentId: this._rootId,
           parentNode: $(`[data-reactid="${this._rootId}"]`),
@@ -114,13 +179,20 @@ class ReactNativeUnit extends Unit {
       newUnit._mountedIndex = i;
     }
     for (let oldKey in oldChildrenUnitMap) {
+      let oldChild = oldChildrenUnitMap[oldKey];
       if (!newChildrenUnitMap.hasOwnProperty(oldKey)) {
         diffQueue.push({
           parentId: this._rootId,
           parentNode: $(`[data-reactid="${this._rootId}"]`),
           type: Type.REMOVE,
-          formIndex: oldChildrenUnitMap[oldKey]._mountedIndex,
+          fromIndex: oldChild._mountedIndex,
         });
+        // 如果要删除掉某一个节点，要把它对应的unit也删除掉
+        this._renderedChildrenUnits = this._renderedChildrenUnits.filter(
+          (item) => item !== oldChild
+        );
+        // 还有把这个节点对应的事件委托也删除掉
+        $(document).undelegate(`.${oldChild._rootId}`);
       }
     }
   }

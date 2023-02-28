@@ -85,7 +85,7 @@ class Counter2 extends React.Component {
 
   componentDidMount() {
     console.log("parent mounted");
-    setInterval(() => {
+    setTimeout(() => {
       this.setState({
         odd: !this.state.odd,
       });
@@ -106,13 +106,73 @@ class Counter2 extends React.Component {
       return React.createElement(
         "ul",
         null,
-        React.createElement("li", { key: "A" }, "A"),
+        React.createElement("span", { key: "A" }, "A1"),
         React.createElement("li", { key: "C" }, "C1"),
         React.createElement("li", { key: "B" }, "B1"),
         React.createElement("li", { key: "E" }, "E1"),
         React.createElement("li", { key: "F" }, "F1")
       );
     }
+  }
+}
+
+class ToDos extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      list: [],
+      text: "",
+    };
+  }
+
+  onChange = (event) => {
+    this.setState({
+      text: event.target.value,
+    });
+  };
+
+  handleClick = () => {
+    let text = this.state.text;
+    this.setState({
+      list: [...this.state.list, text],
+    });
+  };
+
+  onDel = (index) => {
+    this.setState({
+      list: [
+        ...this.state.list.slice(0, index),
+        ...this.state.list.slice(index + 1),
+      ],
+    });
+  };
+
+  render() {
+    let input = React.createElement("input", {
+      onKeyup: this.onChange,
+      value: this.state.text,
+    });
+    let button = React.createElement(
+      "button",
+      { onClick: this.handleClick },
+      "+"
+    );
+    let lists = this.state.list.map((item, index) => {
+      return React.createElement(
+        "div",
+        {},
+        item,
+        React.createElement("button", { onClick: () => this.onDel(index) }, "X")
+      );
+    });
+    return React.createElement(
+      "div",
+      {},
+      input,
+      button,
+      ...lists
+      // React.createElement("ul", {}, ...lists)
+    );
   }
 }
 
@@ -131,10 +191,9 @@ function say() {
 //   )
 // );
 
-let element = React.createElement(Counter, { name: "cxs" });
+let element = React.createElement(ToDos, { name: "cxs" });
 
 console.log(element);
-
 
 // jsx -> React.createElement 通过 babel 编译
 // <button id="sayhello" style={{color: 'red', backgroundColor: 'green'}} onClick={say}>sayhello</button>
@@ -162,3 +221,12 @@ console.log(element);
 
 // React 提供一个render函数，第一个参数是虚拟DOM，第二个参数挂载的真实DOM节点
 React.render(element, document.getElementById("root"));
+
+// 读源码
+// 1. 广度优先
+// 2. 深度优先
+
+// 文件目录有哪些、是干啥的
+// 设置断点、调试、debugger
+// 堆栈法：先写一个简单的例子，比如计数器，然后进行调试，看调用栈，每个流程跑一跑、看一看干啥的
+// 珠峰 my-react 基于react 15.3 思路是一样的，简化了 先看0.3版本，简单
