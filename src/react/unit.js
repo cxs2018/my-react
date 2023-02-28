@@ -43,6 +43,9 @@ class ReactNativeUnit extends Unit {
         continue;
       } else if (/^on[A-Z]/.test(propName)) {
         let eventType = propName.slice(2).toLowerCase();
+        // 先取消之前的事件委托
+        $(document).undelegate(`.${this._rootId}`);
+        // 添加新的事件委托
         $(document).delegate(
           `[data-reactid="${this._rootId}"]`,
           `${eventType}.${this._rootId}`,

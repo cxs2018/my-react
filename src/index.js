@@ -33,6 +33,11 @@ class Counter extends React.Component {
 
   componentDidMount() {
     console.log("parent mounted");
+    // setInterval(() => {
+    //   this.setState({
+    //     number: this.state.number + 1,
+    //   });
+    // }, 1000)
   }
 
   componentDidUpdate() {
@@ -57,7 +62,7 @@ class Counter extends React.Component {
       {
         style: {
           color: this.state.number % 2 === 0 ? "red" : "green",
-          backgroundColor: this.state.number % 2 === 0 ? "green" : "red",
+          backgroundColor: this.state.number % 2 === 0 ? "white" : "#ccc",
         },
       },
       p,
