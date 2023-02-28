@@ -126,6 +126,7 @@ class ReactNativeUnit extends Unit {
   }
 
   // TODO: 为什么不直接使用 this._currentElement.props.children
+  // DONE: 因为this._currentElement.props.children保存的是虚拟DOM，我们想要获得儿子的unit，不只是虚拟DOM
   getOldChildrenMap(childrenUnits = []) {
     let map = {};
     for (let i = 0; i < childrenUnits.length; i++) {

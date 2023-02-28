@@ -44,6 +44,10 @@ class Counter extends React.Component {
     console.log("parent update");
   }
 
+  // shouldComponentUpdate(nextProps, nextState) {
+  //   return nextState.number % 2 === 0
+  // }
+
   handleClick = () => {
     this.setState({
       number: this.state.number + 1,
@@ -126,9 +130,14 @@ function say() {
 //     React.createElement("button", { onClick: say }, "alert")
 //   )
 // );
-// console.log(element);
 
 let element = React.createElement(Counter, { name: "cxs" });
+
+console.log(element);
+
+
+// jsx -> React.createElement 通过 babel 编译
+// <button id="sayhello" style={{color: 'red', backgroundColor: 'green'}} onClick={say}>sayhello</button>
 
 // let element = React.createElement(
 //   "button",
@@ -140,4 +149,16 @@ let element = React.createElement(Counter, { name: "cxs" });
 //   "sayhello"
 // );
 
+// React.createElement 返回值是一个对象，即虚拟DOM，用js对象模拟DOM节点，包含type、props、children等信息
+// {
+//   type: "button",
+//   props: {
+//     id: "sayhello",
+//     style: { color: "red", backgroundColor: "green" },
+//     onClick: say
+//   },
+//   children: ["sayhello"]
+// }
+
+// React 提供一个render函数，第一个参数是虚拟DOM，第二个参数挂载的真实DOM节点
 React.render(element, document.getElementById("root"));
