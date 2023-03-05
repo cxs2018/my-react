@@ -56,6 +56,16 @@ function createWorkInProgress(current, pendingProps) {
     workInProgress.lastEffect = null;
     workInProgress.nextEffect = null;
   }
+
+  // 要保证current和current.alternate上的updateQueue是同步的
+  workInProgress.updateQueue = current.updateQueue;
+  workInProgress.child = current.child;
+  workInProgress.memoizedState = current.memoizedState;
+  workInProgress.memoizedProps = current.memoizedProps;
+  workInProgress.sibling = current.sibling;
+  workInProgress.index = current.index;
+
+  return workInProgress;
 }
 
 class ReactRoot {
