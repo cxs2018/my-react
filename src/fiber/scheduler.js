@@ -41,9 +41,12 @@ function completeUnitOfWork(currentFiber) {
   if (returnFiber) {
     // 把自己儿子的effect链挂到父亲身上
     // currentFiber = B1
+    // 看下父亲有没有first，没有的话，让自己的first作为父亲的first
     if (!returnFiber.firstEffect) {
       returnFiber.firstEffect = currentFiber.firstEffect;
     }
+    // 看下自己有没有last，有的话，判断下父亲有没有last，父亲有last，把父亲last的next指向自己的first，就能把自己的first和自己的兄弟连起来，同时把父亲的last更新为自己的last
+    // 因为下面第一个if的逻辑会先经过自己的孩子，孩子在最下面的effectTag逻辑会给父亲加上last，所以当父亲进来的时候，就会有last了，没有last的情况是为了跳过自己的儿子，儿子不走这个逻辑
     if (!!currentFiber.lastEffect) {
       if (!!returnFiber.lastEffect) {
         returnFiber.lastEffect.nextEffect = currentFiber.firstEffect;
