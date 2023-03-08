@@ -5,6 +5,7 @@ import {
   TAG_ROOT,
   TAG_TEXT,
 } from "./constants";
+import { setProps } from "./utils";
 
 let nextUnitOfWork = null; // 下一个工作单元
 let workInProgressRoot = null; // RootFiber应用的根
@@ -15,13 +16,54 @@ let workInProgressRoot = null; // RootFiber应用的根
  * diff阶段 对比新旧的虚拟DOM，进行增量更新或创建，render阶段
  * commit阶段 进行DOM更新创建阶段，此阶段不能暂停，要一气呵成
  */
-function scheduleRoot(rootFiber) {
+export function scheduleRoot(rootFiber) {
   workInProgressRoot = rootFiber;
   nextUnitOfWork = rootFiber;
 }
 
 function performUnitOfWork(currentFiber) {
   beginWork(currentFiber);
+  if (currentFiber.child) {
+    return currentFiber.child;
+  }
+  while (currentFiber) {
+    completeUnitOfWork(currentFiber);
+    if (currentFiber.sibling) {
+      return currentFiber.sibling;
+    }
+    currentFiber = currentFiber.return;
+  }
+}
+
+// 在完成的时候收集有副作用的fiber，组成effect list
+function completeUnitOfWork(currentFiber) {
+  let returnFiber = currentFiber.return;
+  if (returnFiber) {
+    // 把自己儿子的effect链挂到父亲身上
+    // currentFiber = B1
+    if (!returnFiber.firstEffect) {
+      returnFiber.firstEffect = currentFiber.firstEffect;
+    }
+    if (!!currentFiber.lastEffect) {
+      if (!!returnFiber.lastEffect) {
+        returnFiber.lastEffect.nextEffect = currentFiber.firstEffect;
+      }
+      returnFiber.lastEffect = currentFiber.lastEffect;
+    }
+    // 把自己的effect链挂到父亲身上
+    const effectTag = currentFiber.effectTag;
+    if (effectTag) {
+      // 每个fiber有两个属性，firstEffect指向第一个有副作用的子fiber，lastEffect指向最后一个有副作用的子fiber
+      // 看下父节点的last有没有，有的话，让last的next指向当前节点，没有的话，让first指向当前节点，最后都让last指向当前节点
+      // last没有，说明之前没有指过，先指一下first
+      if (returnFiber.lastEffect) {
+        returnFiber.lastEffect.nextEffect = currentFiber;
+      } else {
+        returnFiber.firstEffect = currentFiber;
+      }
+      returnFiber.lastEffect = currentFiber;
+    }
+  }
 }
 
 /**
@@ -30,6 +72,40 @@ function performUnitOfWork(currentFiber) {
 function beginWork(currentFiber) {
   if (currentFiber.tag === TAG_ROOT) {
     updateHostRoot(currentFiber);
+  } else if (currentFiber.tag === TAG_TEXT) {
+    updateHostText(currentFiber);
+  } else if (currentFiber.tag === TAG_HOST) {
+    updateHost(currentFiber);
+  }
+}
+
+function updateHost(currentFiber) {
+  if (!currentFiber.stateNode) {
+    // 如果此fiber没有创建DOM节点
+    currentFiber.stateNode = createDOM(currentFiber);
+  }
+  const newChildren = currentFiber.props.children;
+  reconcileChildren(currentFiber, newChildren);
+}
+
+function createDOM(currentFiber) {
+  if (currentFiber.tag === TAG_TEXT) {
+    return document.createTextNode(currentFiber.props.text);
+  } else if (currentFiber.tag === TAG_HOST) {
+    let stateNode = document.createElement(currentFiber.type);
+    updateDOM(stateNode, {}, currentFiber.props);
+    return stateNode;
+  }
+}
+
+function updateDOM(stateNode, oldProps, newProps) {
+  setProps(stateNode, oldProps, newProps);
+}
+
+function updateHostText(currentFiber) {
+  if (!currentFiber.stateNode) {
+    // 如果此fiber没有创建DOM节点
+    currentFiber.stateNode = createDOM(currentFiber);
   }
 }
 
@@ -59,6 +135,14 @@ function reconcileChildren(currentFiber, newChildren) {
       nextEffect: null, // effectList也是个单链表
       // effect list顺序和完成顺序是一样的，但是节点只放有副作用的fiber节点
     };
+    if (newFiber) {
+      if (newChildIndex === 0) {
+        currentFiber.child = newFiber;
+      } else {
+        prevSibling.sibling = newFiber;
+      }
+      prevSibling = newFiber;
+    }
     newChildIndex++;
   }
 }
@@ -72,11 +156,39 @@ function workLoop(deadline) {
     nextUnitOfWork = performUnitOfWork(nextUnitOfWork); // 执行完一个任务之后
     shouldYield = deadline.timeRemaining() < 1; // 没有时间了
   }
-  if (!nextUnitOfWork) {
-    console.log("render阶段结束了");
+  if (!nextUnitOfWork && workInProgressRoot) {
+    console.log("render阶段结束了", workInProgressRoot);
+    commitRoot();
   }
   // 不管有没有任务，都请求浏览器再次调度，每一帧都执行一次workLoop
   requestIdleCallback(workLoop, { timeout: 500 });
+}
+
+function commitRoot() {
+  let currentFiber = workInProgressRoot.firstEffect;
+  while (currentFiber) {
+    console.log(
+      "currenFiber",
+      currentFiber.type,
+      currentFiber.props.id,
+      currentFiber.props.text
+    );
+    commitWork(currentFiber);
+    currentFiber = currentFiber.nextEffect;
+  }
+  workInProgressRoot = null;
+}
+
+function commitWork(currentFiber) {
+  if (!currentFiber) {
+    return;
+  }
+  let returnFiber = currentFiber.return;
+  let returnDOM = returnFiber.stateNode;
+  if (currentFiber.effectTag === PALCEMENT) {
+    returnDOM.appendChild(currentFiber.stateNode);
+  }
+  currentFiber.effectTag = null;
 }
 
 // react 告诉浏览器，我现在有任务请你在闲的时候执行

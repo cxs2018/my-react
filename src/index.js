@@ -1,4 +1,5 @@
 import React from "./fiber/react";
+import ReactDOM from "./fiber/react-dom";
 
 // class SubCounter extends React.Component {
 //   componentWillMount() {
@@ -232,10 +233,16 @@ function say() {
 // 珠峰 my-react 基于react 15.3 思路是一样的，简化了 先看0.3版本，简单
 
 const element = (
-  <div id="A1">
-    <div id="B1">B1</div>
-    <div id="B2">B2</div>
+  <div id="A1" style={{ border: "1px solid red" }}>
+    <div id="B1" style={{ border: "1px solid red" }}>
+      <div id="C1" style={{ border: "1px solid red" }}></div>
+      <div id="C2" style={{ border: "1px solid red" }}></div>
+    </div>
+    <div id="B2" style={{ border: "1px solid red" }}>
+      <div id="D1" style={{ border: "1px solid red" }}></div>
+      <div id="D2" style={{ border: "1px solid red" }}></div>
+    </div>
   </div>
 );
 
-console.log(element);
+ReactDOM.render(element, document.getElementById("root"));

@@ -1,7 +1,6 @@
 import { ELEMENT_TEXT } from "./constants";
 
 function createElement(type, config, ...children) {
-  console.log("-----");
   delete config.__self;
   delete config.__source; // 表示这个元素是在哪行哪列哪个文件生成的
   return {
