@@ -232,17 +232,43 @@ function say() {
 // 堆栈法：先写一个简单的例子，比如计数器，然后进行调试，看调用栈，每个流程跑一跑、看一看干啥的
 // 珠峰 my-react 基于react 15.3 思路是一样的，简化了 先看0.3版本，简单
 
-const element = (
-  <div id="A1" style={{ border: "1px solid red" }}>
-    <div id="B1" style={{ border: "1px solid red" }}>
-      <div id="C1" style={{ border: "1px solid red" }}></div>
-      <div id="C2" style={{ border: "1px solid red" }}></div>
-    </div>
-    <div id="B2" style={{ border: "1px solid red" }}>
-      <div id="D1" style={{ border: "1px solid red" }}></div>
-      <div id="D2" style={{ border: "1px solid red" }}></div>
-    </div>
-  </div>
-);
+// const element = (
+//   <div id="A1" style={{ border: "1px solid red" }}>
+//     <div id="B1" style={{ border: "1px solid red" }}>
+//       <div id="C1" style={{ border: "1px solid red" }}></div>
+//       <div id="C2" style={{ border: "1px solid red" }}></div>
+//     </div>
+//     <div id="B2" style={{ border: "1px solid red" }}>
+//       <div id="D1" style={{ border: "1px solid red" }}></div>
+//       <div id="D2" style={{ border: "1px solid red" }}></div>
+//     </div>
+//   </div>
+// );
 
-ReactDOM.render(element, document.getElementById("root"));
+class Counter extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      number: 0,
+    };
+  }
+
+  handleClick = () => {
+    this.setState((state) => {
+      return {
+        number: state.number + 1,
+      };
+    });
+  };
+
+  render() {
+    return (
+      <div>
+        <span>{this.state.number}</span>
+        <button onClick={this.handleClick}>+</button>
+      </div>
+    );
+  }
+}
+
+ReactDOM.render(<Counter name="counter" />, document.getElementById("root"));
