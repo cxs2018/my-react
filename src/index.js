@@ -245,30 +245,70 @@ function say() {
 //   </div>
 // );
 
-class Counter extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      number: 0,
-    };
-  }
+// class Counter extends React.Component {
+//   constructor(props) {
+//     super(props);
+//     this.state = {
+//       number: 0,
+//     };
+//   }
 
-  handleClick = () => {
-    this.setState((state) => {
-      return {
-        number: state.number + 1,
-      };
-    });
-  };
+//   handleClick = () => {
+//     this.setState((state) => {
+//       return {
+//         number: state.number + 1,
+//       };
+//     });
+//   };
 
-  render() {
-    return (
-      <div>
-        <span>{this.state.number}</span>
-        <button onClick={this.handleClick}>+</button>
-      </div>
-    );
+//   render() {
+//     return (
+//       <div>
+//         <span>{this.state.number}</span>
+//         <button onClick={this.handleClick}>+</button>
+//       </div>
+//     );
+//   }
+// }
+
+const ADD = "ADD";
+function reducer(state, action) {
+  switch (action.type) {
+    case ADD:
+      return { count: state.count + 1 };
+    default:
+      return state;
   }
 }
 
-ReactDOM.render(<Counter name="counter" />, document.getElementById("root"));
+function FunctionCounter() {
+  const [numberState, setNumberState] = React.useState({ number: 0 });
+  const [countState, dispatch] = React.useReducer(reducer, { count: 0 });
+  return (
+    <div>
+      <div>
+        <span>{countState.count} </span>
+        <button onClick={() => dispatch({ type: ADD })}>+</button>
+      </div>
+      <div>
+        <span>{numberState.number}</span>
+        <button
+          onClick={() => setNumberState({ number: numberState.number + 1 })}
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.render(
+  <FunctionCounter name="counter" />,
+  document.getElementById("root")
+);
+
+// TODO
+// 1. expirationTime 任务优先级 任务调度 超时时间的处理
+// 2. reconcile domdiff的优化key处理
+// 3. 合成事件 SyntheicEvent
+// 4. ref useEffect......
